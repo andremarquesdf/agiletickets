@@ -44,8 +44,7 @@ public class EspetaculosController {
 		return agenda.espetaculos();
 	}
 
-	@Post @Path("/espetaculos")
-	public void adiciona(Espetaculo espetaculo) {
+	public void validaEspetaculo(Espetaculo espetaculo) {
 		// aqui eh onde fazemos as varias validacoes
 		// se nao tiver nome, avisa o usuario
 		// se nao tiver descricao, avisa o usuario
@@ -55,7 +54,15 @@ public class EspetaculosController {
 		if (Strings.isNullOrEmpty(espetaculo.getDescricao())) {
 			validator.add(new ValidationMessage("Descricao do espetaculo nao pode estar em branco", ""));
 		}
-		validator.onErrorRedirectTo(this).lista();
+		validator.onErrorRedirectTo(this).lista();		
+	}
+	
+	
+	
+	
+	@Post @Path("/espetaculos")
+	public void adiciona(Espetaculo espetaculo) {
+		validaEspetaculo(espetaculo);
 
 		agenda.cadastra(espetaculo);
 		result.redirectTo(this).lista();
@@ -71,6 +78,21 @@ public class EspetaculosController {
 
 		result.include("sessao", sessao);
 	}
+	
+	
+	public void validarReserva(Sessao sessao, final Integer quantidade)
+	{		
+		if (quantidade < 1) {
+			validator.add(new ValidationMessage("Voce deve escolher um lugar ou mais", ""));
+		}
+
+		if (!sessao.podeReservar(quantidade)) {
+			validator.add(new ValidationMessage("Nao existem ingressos dispon√≠veis", ""));
+		}
+		
+		// em caso de erro, redireciona para a lista de sessao
+		validator.onErrorRedirectTo(this).sessao(sessao.getId());
+	}
 
 	@Post @Path("/sessao/{sessaoId}/reserva")
 	public void reserva(Long sessaoId, final Integer quantidade) {
@@ -79,21 +101,10 @@ public class EspetaculosController {
 			result.notFound();
 			return;
 		}
-
-		if (quantidade < 1) {
-			validator.add(new ValidationMessage("Voce deve escolher um lugar ou mais", ""));
-		}
-
-		if (!sessao.podeReservar(quantidade)) {
-			validator.add(new ValidationMessage("Nao existem ingressos dispon√≠veis", ""));
-		}
-
-		// em caso de erro, redireciona para a lista de sessao
-		validator.onErrorRedirectTo(this).sessao(sessao.getId());
-
+		
+		validarReserva(sessao, quantidade);
 		sessao.reserva(quantidade);
 		result.include("message", "Sessao reservada com sucesso");
-
 		result.redirectTo(IndexController.class).index();
 	}
 
